@@ -36,12 +36,18 @@ class Neuron:
         self.error = (math.pow(target-output,2))/2
         return self.error
     
-    def update_weights(self,error):        
-        result = self.learn_rate*error
+    def update_hidden_weights(self,front_deltas,front_weights,entry):    
+        delta_temp = sum([delta*weight for delta,weight in zip(front_deltas,front_weights)])
         
-        for index in range(len(self.weights)):
-            #print(self.weights[index].value)
-            self.weights[index].value = self.weights[index].value+(result*self.entries[index])
+        self.delta = delta_temp * self.output * (1 - self.output) 
+        
+        cont = 0        
+        updated_weights = []
+        for weight in self.weights:
+            new_weight = Weight(weight.value - self.learn_rate * self.delta * entry)
+            updated_weights.append(new_weight)
+            cont = cont + 1
+        self.updated_weights = updated_weights
         
     def update_output_weights(self,entries,target):
         partial_error_total = self.output - target
@@ -52,24 +58,16 @@ class Neuron:
         partial_erro = [self.delta * entry for entry in entries]
         
         cont = 0
+        updated_weights = []
         for weight in self.weights:
-            weight.value = weight.value - self.learn_rate * partial_erro[cont]
+            new_weight = Weight(weight.value - self.learn_rate * partial_erro[cont])
+            updated_weights.append(new_weight)
             cont = cont + 1
-            
-        print(self.get_weights_values())
+        self.updated_weights = updated_weights
+    
+    def update_weights(self):
+        self.weights = self.updated_weights
         
-    def execute(self,entries,target):
-        self.entries = entries
-        self.target = target
-        
-        error = self.calculate_error()
-        if(error != 0):
-            self.update_weights(error)
-            print("(1)",self.get_weights_values())
-            return 1
-        else:
-            print("(0)",self.get_weights_values())
-            return 0
             
 class Layer:
     
@@ -86,8 +84,28 @@ class Layer:
         self.error_total = sum(outputs)        
         return self.error_total 
     
+    def get_deltas(self):
+        deltas = [neuron.delta for neuron in self.neurons]
+        return deltas
+    
+    def get_weights(self):
+        weights = [neuron.get_weights_values() for neuron in self.neurons]
+        return weights
+        
     def update_output_weights(self,targets):
         [neuron.update_output_weights(self.entries,target) for neuron,target in zip(self.neurons,targets)]
+    
+    def update_hidden_weights(self,front_layer):
+        front_deltas = front_layer.get_deltas()
+        front_weights = np.array(front_layer.get_weights())
+        
+        print(front_deltas,front_weights)        
+        
+        cont = 1
+        for neuron in self.neurons:
+            front_weights[:,cont]
+            neuron.update_hidden_weights(front_deltas,front_weights[:,cont],self.entries[cont])
+            cont = cont + 1
         
 if __name__ == "__main__":
     
@@ -128,7 +146,10 @@ if __name__ == "__main__":
 
     if(final_error > 0.1):
         layer2.update_output_weights(targets[0])
-
+        #print("DELTAS",layer2.get_deltas())
+        layer1.update_hidden_weights(layer2)
+        
+        
     print(layer2.error_total)
 '''
 def separate_input_target(data,first_target_index):

@@ -7,9 +7,6 @@ Created on Tue Oct 18 04:39:23 2016
 
 import math
 
-out = 0.75136507
-target = 0.01
+m = np.array([[1,2,3,4],[5,6,7,8]])
 
-delta = -(target- out)*out*(1-out)
-
-print(delta)
+print(m[:,2])
