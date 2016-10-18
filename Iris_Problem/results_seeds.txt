@@ -1,0 +1,3 @@
+Nome do arquivo: samples.txt
+150 150 1
+BASE DE TREINO (%):0.8
