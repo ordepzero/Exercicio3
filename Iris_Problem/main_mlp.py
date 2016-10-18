@@ -71,15 +71,17 @@ class Neuron:
             
 class Layer:
     
-    def __init__(self,entries,neurons):
-        self.entries = entries
+    def __init__(self,neurons,name):
+        self.name = name
         self.neurons = neurons
         
-    def calculate_output(self):
+    def calculate_output(self,entries):
+        self.entries = entries
         outputs = [neuron.calculate_output(self.entries) for neuron in self.neurons]
         return outputs 
  
-    def calculate_error(self,targets):
+    def calculate_error(self,targets,entries):
+        self.entries = entries
         outputs = [neuron.calculate_error(self.entries,target) for neuron,target in zip(self.neurons,targets)]
         self.error_total = sum(outputs)        
         return self.error_total 
@@ -106,8 +108,65 @@ class Layer:
             front_weights[:,cont]
             neuron.update_hidden_weights(front_deltas,front_weights[:,cont],self.entries[cont])
             cont = cont + 1
+class OutputLayer(Layer):
+    def __init__(self,neurons):
+        Layer.__init__(self,neurons)
+    
+class Network:
+    
         
+    def __init__(self,topology):        
+        topology.reverse()
+
+        self.layers = []
+        for x in range(len(topology)-1):
+            print(x,topology[x],topology[x+1])
+            neurons = self.initialize_neurons(topology[x+1],topology[x])
+            
+            if(x == 0):#CAMADA DE SAIDA
+                layer = Layer(neurons,"saida")
+            elif(x == len(topology)-2):
+                layer = Layer(neurons,"entrada")
+            else:
+                layer = Layer(neurons,"escondida")
+            self.layers.append(layer)
+            
+        self.layers.reverse()#COLOCOU AS CAMADAS CONFIGURADAS NA ORDEM NORMAL
+    
+    def initialize_neurons(self,n_entries,n_neurons):    
+        #weights = [[Weight(0.5) for x in range(n_entries) ] for y in range(n_neurons)]
+        
+        neurons = []
+        for x in range(n_neurons):
+            weights = []
+            for y in range(n_entries):
+                weights.append(Weight(0.5))
+                
+            neuton = Neuron(weights)
+            neurons.append(neuton)
+            
+        for x in neurons:
+            weights = x.get_weights_values()
+            for y in weights:
+                print(y, " ",end="")
+            print("")
+            
+        return neurons  
+    
+    def execute(self):
+        [print(layer.name) for layer in self.layers]
+        
+    def bakcpropagation(self):
+        pass
+    
 if __name__ == "__main__":
+       
+    topology = [4,3,4,2]
+    
+    net = Network(topology)
+    net.execute()
+    
+    '''
     
     inputs = [1, 0.05, 0.1]
     targets = [[0.01, 0.99]]
@@ -140,9 +199,10 @@ if __name__ == "__main__":
 
 
 
-    layer1 = Layer(inputs,neurons1)
-    layer2 = Layer([1]+layer1.calculate_output(),neurons2)
-    final_error = layer2.calculate_error(targets[0])
+    layer1 = Layer(neurons1)
+    layer2 = Layer(neurons2)
+    
+    final_error = layer2.calculate_error(targets[0],[1]+layer1.calculate_output(inputs))
 
     if(final_error > 0.1):
         layer2.update_output_weights(targets[0])
@@ -151,6 +211,9 @@ if __name__ == "__main__":
         
         
     print(layer2.error_total)
+    '''
+    
+    
 '''
 def separate_input_target(data,first_target_index):
     database = {}
