@@ -23,7 +23,7 @@ class Neuron:
     def linear_combination(self,entries):
         #print("<<")
         #[print("LC",entry,weight.value) for entry,weight in zip(entries,self.weights)]
-        #print(">>")        
+        #print(">>")    
         return sum([(entry*weight.value) for entry,weight in zip(entries,self.weights)])
     
     def activation(self,value):
@@ -125,7 +125,7 @@ class Network:
 
         self.layers = []
         for x in range(len(topology)-1):
-            print(x,topology[x],topology[x+1])
+            #print(x,topology[x],topology[x+1])
             neurons = self.initialize_neurons(topology[x+1],topology[x])
             
             if(x == 0):#CAMADA DE SAIDA
@@ -149,15 +149,16 @@ class Network:
                 
             neuton = Neuron(weights)
             neurons.append(neuton)
-            
+        '''  
         for x in neurons:
             weights = x.get_weights_values()
             for y in weights:
                 print(y, " ",end="")
             print("")
-            
+        ''' 
         return neurons  
     
+    #FUNCAO RECEBE UMA ENTRADA DE CADA VEZ
     def execute(self,inputs,targets):
         #[print(layer.name) for layer in self.layers]
                      
@@ -166,84 +167,105 @@ class Network:
             entries = [1]+self.layers[x].calculate_output(entries)  
         
         final_error = self.layers[-1].calculate_error(targets,entries)#RECEBE OS TARGETS PARA CALCULAR O ERRO
-        
-        print("ERRO FINAL",final_error)
-        if(final_error > 0.1):
-            self.bakcpropagation(targets)
+        return final_error
+        #print("ERRO FINAL",final_error)
+        #if(final_error > 0.1):
+        #    self.bakcpropagation(targets)
+      
+     #PASSA TODA A BASE DE TREINAMENTO
+    def trainning(self,inputs,targets):
+        last_error = 0        
+        error = 0
+        epoch = 0;
+        while True:  
+            current_error = 0
             
+            for i in range(len(inputs)):
+                error = self.execute(inputs[i],[targets[i]])
+                current_error = current_error + error
+                
+                if(error > 0.1):
+                    self.bakcpropagation([targets[i]])
+                      
+            current_error = current_error / len(inputs)
+            
+            print(epoch,current_error)
+            if(epoch > 0):
+                if(last_error - current_error < 0.01):
+                    break
+                
+            last_error = current_error
+            epoch = epoch + 1
+            if(epoch == 100):
+                break
+
+        
     def bakcpropagation(self,targets):
         #ORDEM DA CAMADA DE SAIDA PARA CAMADA DE ENTRADA
         self.layers.reverse()
         
         self.layers[0].update_output_weights(targets)
-        #print("<",self.layers[0].name)
         for x in range(1,len(self.layers)): 
-            #print(self.layers[x].name)
             self.layers[x].update_hidden_weights(self.layers[x-1])
             
-        #RETIRNA A ORDEM NORMAL
-        #print(">")
+        #RETORNA A ORDEM NORMAL
         self.layers.reverse()
         
         #SUBSTITUI OS PESOS ANTERIORES PELOS PESOS ATUALIZADOS            
         [layer.update_weights() for layer in self.layers]
         
+def read_file(filename,separator):
+    array = []
+    
+    with open(filename,"r") as f:
+        content = f.readlines()
+        for line in content: # read rest of lines
+            array.append([x for x in line.split(separator)])   
+    return np.array(array);
+
+def str_to_number(data):
+    return[[float(j) for j in i] for i in data]
+    
+def insert_bias(file_array):    
+    
+    data = [np.append([1],d) for d in file_array]
+    #print(data)
+    return data
+    
+    
+def load_data(filename,separator):
+    
+    file = read_file(filename,separator)
+    file = str_to_number(file)
+    file_array = np.array(file)
+    #return file_array
+    #print(file_array)
+    return insert_bias(file_array)
+    
+def separate_input_target(data):
+    inputs  = [d[:2] for d in data] 
+    targets = [np.array(d[-1]) for d in data] 
+    return inputs, targets
+    #print(targets)
+    
+    
 if __name__ == "__main__":
-       
-    topology = [4,3,4,2]
+    filename = "samples.txt"
+    #AS ENTRADAS DEVEM POSSUIR O VALOR DO BIAS 1 (POSITIVO) NA PRIMEIRA COLUNA
+    data = load_data(filename," ")
+    topology = [2,3,4,1]
     
     inputs = [[1, 0.05, 0.1, 0.2]]
     targets = [[0.01, 0.99]]    
     
+    inputs,targets = separate_input_target(data)
+    #print(inputs,targets)
     net = Network(topology)
-    net.execute(inputs[0],targets[0])
     
-    '''
+
+    net.trainning(inputs,targets)
     
-    inputs = [1, 0.05, 0.1]
-    targets = [[0.01, 0.99]]
     
-    wb1_1 = Weight(0.35)
-    w1 = Weight(0.15)
-    w2 = Weight(0.20)
-    wb1_2 = Weight(0.35)
-    w3 = Weight(0.25)
-    w4 = Weight(0.30)
-    wb2_1 = Weight(0.60)    
-    w5 = Weight(0.40)
-    w6 = Weight(0.45)
-    wb2_2 = Weight(0.60) 
-    w7 = Weight(0.50)
-    w8 = Weight(0.55)
-
-    weights1 = [wb1_1,w1,w2]
-    weights2 = [wb1_2,w3,w4]
-    weights3 = [wb2_1,w5,w6]    
-    weights4 = [wb2_2,w7,w8]
-
-    h1 = Neuron(weights1)
-    h2 = Neuron(weights2)
-    o1 = Neuron(weights3)
-    o2 = Neuron(weights4)
-    
-    neurons1 = [h1,h2]
-    neurons2 = [o1,o2]
-
-
-
-    layer1 = Layer(neurons1)
-    layer2 = Layer(neurons2)
-    
-    final_error = layer2.calculate_error(targets[0],[1]+layer1.calculate_output(inputs))
-
-    if(final_error > 0.1):
-        layer2.update_output_weights(targets[0])
-        #print("DELTAS",layer2.get_deltas())
-        layer1.update_hidden_weights(layer2)
-        
-        
-    print(layer2.error_total)
-    '''
     
     
 '''
