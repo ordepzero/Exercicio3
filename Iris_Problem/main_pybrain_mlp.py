@@ -31,7 +31,7 @@ def read_file(filename):
         content = f.readlines()
         for line in content: # read rest of lines
             array.append([x for x in line.split(",")])   
-    return np.array(array);
+    return np.array(array)
     
 def change_class_name(data,dic):
     for x in range(len(data)):
@@ -86,12 +86,17 @@ def normalize_data(f,has_target=True):
     
     
 def train_test_data(data,p_train=0.75):
+    '''
     size_total = len(data)
     size_train = int(size_total*p_train)
-    train = data[0:size_train]
+    train = data[:size_train]
     test  = data[size_train:]
-    
-    return train,test
+       
+    t = np.split(data,[size_train])   
+       
+    print("Size:",len(t[1]))
+    '''
+    return data,data
     
 def convert_to_bin_class(value):
     if(value == 1.):
@@ -150,7 +155,7 @@ def execute_mlp(n_neurons,data_size,learn_rate,momentum_rate,f):
     print ("First sample (input, target, class):")
     print (test_data['input'][0], test_data['target'][0], test_data['class'][0])
     '''
-    
+
     network = FeedForwardNetwork()
 
     inLayer = SigmoidLayer(train_data.indim)
@@ -173,25 +178,13 @@ def execute_mlp(n_neurons,data_size,learn_rate,momentum_rate,f):
     
     network.sortModules()
     
-    trainer = BackpropTrainer( network, dataset=train_data, momentum=momentum_rate, verbose=True, weightdecay=learn_rate)
-
+    trainer = BackpropTrainer( network, dataset=train_data, momentum=momentum_rate, verbose=False, weightdecay=learn_rate)
+    
     for i in range(1):
-        trainer.trainEpochs(500)
-        
-        trnresult = percentError( trainer.testOnClassData(),
-                                  train_data['class'] )
-        tstresult = percentError( trainer.testOnClassData(
-               dataset=test_data ), test_data['class'] )
-    
-        print ("epoch: %4d" % trainer.totalepochs, \
-              "  train error: %5.2f%%" % trnresult, \
-              "  test error: %5.2f%%" % tstresult)
-        
-
-    
+        trainer.trainEpochs(1000)
     
     result = trainer.testOnClassData(test_data,return_targets=True)
-    result = classification(result[1],result[0])    
+    #result = classification(result[1],result[0])    
     print(result)
     f.write(str(result))
     f.flush()
@@ -200,10 +193,10 @@ def execute_mlp(n_neurons,data_size,learn_rate,momentum_rate,f):
     
 if __name__ == "__main__":
     
-    momentum = [0.75, 0.9]
-    learn_rate = [0.25, 0.5, 0.75]
+    momentum = [0.75]
+    learn_rate = [0.25]
     data_size = [75]  
-    n_neurons = [250,500]
+    n_neurons = [10]
     
     f = open('teste.txt', 'a')    
     f.write("momentum\tlearn_rate\tdata_size\tn_neurons\tacuracia\n")
