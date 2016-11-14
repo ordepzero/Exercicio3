@@ -126,7 +126,7 @@ def execute_mlp(n_neurons,data_size,learn_rate,momentum_rate,f):
     file_array = np.array(file)
     data = normalize_data(file_array)
     
-    data = order_data(data)
+    #data = order_data(data)
     
     data = data[::-1]#INTERTENDO A ORDEM DOS ITENS    
     
@@ -177,8 +177,9 @@ def execute_mlp(n_neurons,data_size,learn_rate,momentum_rate,f):
     network.addConnection(hidden_to_out)
     
     network.sortModules()
-    
-    trainer = BackpropTrainer( network, dataset=train_data, momentum=momentum_rate, verbose=False, weightdecay=learn_rate)
+    #trainer = BackpropTrainer( network, dataset=train_data, momentum=momentum_rate, verbose=False, weightdecay=learn_rate)
+
+    trainer = BackpropTrainer( network, dataset=train_data, verbose=False)
     
     for i in range(1):
         trainer.trainEpochs(1000)

@@ -3,10 +3,22 @@ import numpy as np
 import math
 import random
 from pybrain.datasets  import ClassificationDataSet
+from pybrain.structure import LinearLayer
+from pybrain.structure import FeedForwardNetwork
+from pybrain.structure import FullConnection
+from pybrain.supervised.trainers import BackpropTrainer
 
 def logistic(value):
     #print("_",value)
     return 1/(1+math.exp(-value))
+
+def linear_function(value):
+    if(value > 1):
+        return 1
+    elif(value < 0):
+        return 0
+    else:
+        return value
     
 def read_file(filename):
     array = []
@@ -25,32 +37,6 @@ def change_class_name(data,dic):
 def str_to_number(data):
     return[[float(j) for j in i] for i in data]
     
-def order_data(data):
-    #n_class = [1.,2.,3.] #VERSAO ORIGINAL
-    n_class = [0.,1.,2.]
-    data_alternated = []
-    
-    #print(size_train,size_each_class)
-    
-    index = 0
-    for x in range(len(data)):   
-        c = n_class[index]
-        for i in data:            
-            if(i[-1] == c):
-                #print("IGUAL",i[-1],c,n_class[-1])
-                i[-1] = i[-1] * -1
-                data_alternated.append(i)
-                if(c == n_class[-1]):
-                    c = n_class[0]
-                    index = -1
-                
-                index = index + 1
-                c = n_class[index]
-
-    data_alternated = np.array(data_alternated)
-    data_alternated[:,-1] *= -1
-    
-    return data_alternated 
 
 def normalize_data(f,has_target=True):
     
@@ -92,7 +78,7 @@ def calculate_variance(points,center):
     return total/len(points)
 
 def caculate_error(inputs,weights,outputs, targets):
-    print(inputs,weights,outputs, targets)
+    #print(inputs,weights,outputs, targets)
     
     new_weights = []
     
@@ -100,7 +86,7 @@ def caculate_error(inputs,weights,outputs, targets):
         delta = (targets[i]-outputs[i])*(outputs[i] *(1 - outputs[i]))        
         nws = []
         for j in range(len(weights[i])):
-            w = weights[i][j] + (1 * delta * inputs[j])
+            w = weights[i][j] + (0.1 * delta * inputs[j])
             nws.append(w)    
             
         new_weights.append(nws) 
@@ -123,6 +109,28 @@ def is_equal(outputs, targets):
         if(outputs[i] != targets[i]):
             return False
     return True
+
+def order_data(values): 
+    new_order = []       
+    while True:
+        position = random.randint(0, len(values)-1)
+        #print(len(values),position)    
+        #print(values[position])
+        new_order.append(values[position])
+        values = np.delete(values, position, 0)
+        
+        #print(".",t)
+        if(len(values) == 0):
+            break    
+    return new_order
+    
+def classification(targets,outputs):
+    cont = 0    
+    for i in range(len(targets)):
+        if(targets[i] == outputs[i]):
+            cont = cont + 1
+    result = cont / len(targets)
+    return result
     
 if __name__ == "__main__":
     
@@ -132,15 +140,20 @@ if __name__ == "__main__":
     
     dic = {'Iris-setosa\n': 0, 'Iris-versicolor\n': 1, 'Iris-virginica\n': 2}    
     
-    filename = "iris.txt"
+    filename = "iris2.txt"
     file = read_file(filename)
     file = change_class_name(file,dic)
     file = str_to_number(file)
     file_array = np.array(file)
     data = normalize_data(file_array)
-    
-    #print(data[:,:-1])
-    
+    #print(data)
+    #data = np.array(order_data(data))
+    #print("#####")
+    #print(data)
+    #print(len(data))
+    data_test = data[90:150]
+    data = data[:90]
+     
     results = [[0 for x in range(2)] for y in range(n_classes)] 
     kmeans = KMeans(n_clusters = n_classes, random_state=0).fit(data[:,:-1])
 
@@ -164,51 +177,57 @@ if __name__ == "__main__":
     
         
     
-    print("---",centers)
+    #print("---",centers)
     
     variations = [calculate_variance(point,center) for point,center in zip(points,centers)]    
-    print(variations)
+    #print(variations)
     entries = []
     for d in range(len(data)):
         entry = weighted_sum(data[d][:-1],centers,variations)
         entries.append(entry)
+        #print(entry)
     #print(len(entries))
     
     
     train_data = ClassificationDataSet(n_classes, 1,nb_classes=n_classes)
+    test_data = ClassificationDataSet(n_classes, 1,nb_classes=n_classes)   
     
     for n in range(0, len(entries)):
         train_data.addSample( entries[n], [data[n][-1]])
+        
+    entries = []
+    for d in range(len(data_test)):
+        entry = weighted_sum(data_test[d][:-1],centers,variations)
+        entries.append(entry)
+        
+    for n in range(0, len(entries)):
+        test_data.addSample( entries[n], [data_test[n][-1]])
 
     train_data._convertToOneOfMany( )
+    test_data._convertToOneOfMany( )
+    
+    network = FeedForwardNetwork()
+    inLayer = LinearLayer(3)    
+    outLayer = LinearLayer(3)
+    network.addInputModule(inLayer)
+    network.addOutputModule(outLayer)
+    in_to_out = FullConnection(inLayer, outLayer)
+    network.addConnection(in_to_out)
     
     
-    for epochs in range(5):
-        rights = 0
-        for i in range(len(train_data["input"])):
-            #print("<")
-            results = []
-            for j in range(len(output_weights)):
-                add_bias = [1]
-                add_bias.extend(train_data["input"][i])
-                #print(add_bias)
-                total = 0
-                
-                for x in range(len(add_bias)):#CALCULANDO CADA SAÍDA
-                    total += add_bias[x] * output_weights[j][x]
-                    #print("<",entries[i][x],output_weights[j][x],">")
-                result = logistic(total)
-                results.append(result)
-                #print(add_bias,result,train_data["target"][i][j])
-                #output_weights[j] = caculate_error(add_bias,output_weights[j],result, train_data["target"][i][j])
-                #print(i,result,train_data["target"][i][j])
-                
-            r = is_equal(convert(results),train_data["target"][i])
-            if(r == True):
-                rights += 1
-            else:
-                output_weights = caculate_error(add_bias,output_weights,results, train_data["target"][i])
+    network.sortModules()
 
-            #print(i,convert(results),train_data["target"][i],rights)
-        print("Acertos:", rights)
-            
+    trainer = BackpropTrainer( network, dataset=train_data, verbose=False)
+    for i in range(1):
+        trainer.trainEpochs(1000)
+    
+    result = trainer.testOnClassData(test_data,return_targets=True)
+    result = classification(result[1],result[0]) 
+    print(result)
+    
+    
+    
+    
+    
+    
+    
